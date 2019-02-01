@@ -6,6 +6,7 @@ import traceback
 import sys
 import os.path
 import json
+import re
 
 __author__ = 'Nicolas Reimen'
 
@@ -22,6 +23,7 @@ g_html_top = """
 <head>
 <meta charset="utf-8">
 <title>{0}</title>
+<link rel="stylesheet" type="text/css" href="output.css" media="screen,tv">
 </head>
 <body>
 """
@@ -61,15 +63,24 @@ def get_words(p_db_connection, p_id):
             l_lexicon = json.loads(l_lex_json)
             l_lemma = json.loads(l_lemma_json)
 
-            l_html += '<tr><td>{0}</td>\n'.format(l_word)
+            l_html += (
+                '<tr><td class="tooltip">{0}' +
+                '<span class="tooltiptext">{1}</span></td>\n').format(
+                    l_word, ' / '.join(l_grammar))
+
             l_html += '<td>{0}</td>\n'.format('-'.join(l_lemma))
-            if len(l_grammar) == 1:
-                l_html += '<td>{0}</td>\n'.format(l_grammar[0])
-            else:
-                l_html += '<td><ul>\n'
-                for l_gr in l_grammar:
-                    l_html += '<li>{0}</li>\n'.format(l_gr)
-                l_html += '</ul></td>\n'
+
+            # if len(l_grammar) == 1:
+            #     l_html += '<td>{0}</td>\n'.format(l_grammar[0])
+            # else:
+            #    l_html += '<td><ul>\n'
+            #     for l_gr in l_grammar:
+            #        l_html += '<li>{0}</li>\n'.format(l_gr)
+            #    l_html += '</ul></td>\n'
+
+            l_lexicon = [re.sub(r'^([^\s]+)\s', r'<span class="lexword">\1</span> ', l_lex)
+                         for l_lex in l_lexicon]
+
             if len(l_lexicon) == 1:
                 l_html += '<td>{0}</td>\n'.format(l_lexicon[0])
             else:
@@ -141,7 +152,9 @@ if __name__ == "__main__":
             with open(l_path, 'w') as l_file_out:
                 l_file_out.write(g_html_top.format(
                     '{0}.{1}.{2}.{3}'.format(l_book, l_chapter, l_section, l_verse)))
-                l_file_out.write('<p>{0}:{1}:{2}:{3}</p>\n'.format(l_book, l_chapter, l_section, l_verse))
+                l_file_out.write(
+                    '<p class="verse_number">{0}:{1}:{2}:{3}</p>\n'.format(
+                        l_book, l_chapter, l_section, l_verse))
                 l_file_out.write('<p>{0}</p>\n'.format(l_skt_txt))
                 l_file_out.write('<p>{0}</p>\n'.format(l_trans_txt))
                 l_file_out.write(get_words(l_db_connection, l_id_verse))

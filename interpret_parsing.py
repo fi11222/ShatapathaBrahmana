@@ -20,6 +20,8 @@ g_dbPassword = 'murugan!'
 
 g_cache = '/home/fi11222/disk-partage/Dev/ShatapathaBrahmana/inria/'
 
+g_verse_stop = False
+
 
 # ---------------------------------------------------- functions & classes ---------------------------------------------
 def get_lex(p_link_lex):
@@ -257,7 +259,7 @@ if __name__ == "__main__":
                 l_row_count += 1
 
             save_sentence(l_db_connection, l_id_verse, l_sentence)
-            if l_id_verse == 143415:
+            if l_id_verse == 143415 and g_verse_stop:
                 for l_begin, l_end, l_word, l_lemma, l_grammar, l_lex in l_sentence:
                     print('{0:5} {1:5} {2} {3} {4} {5}'.format(l_begin, l_end, l_word, l_lemma, l_grammar, l_lex))
                 sys.exit(0)

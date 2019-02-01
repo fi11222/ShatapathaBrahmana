@@ -7,6 +7,8 @@ import re
 import urllib.parse
 import urllib.request
 import os
+import time
+from socket import timeout
 
 __author__ = 'Nicolas Reimen'
 
@@ -37,6 +39,8 @@ g_iast_to_velthuis = [
 
 g_cache = '/home/fi11222/disk-partage/Dev/Shatapatha Brahmana/TMP/'
 
+g_delete = False
+
 
 # ---------------------------------------------------- Functions -------------------------------------------------------
 def save_parsing(
@@ -57,9 +61,10 @@ def save_parsing(
                     "TB_PARSING"(
                         "ID_VERSE"
                         , "TX_PARSING_HTML"
+                        , "N_LENGTH"
                     )
-                    values( %s, %s );
-            """, (p_id, p_page))
+                    values( %s, %s, %s );
+            """, (p_id, p_page, len(p_page)))
 
         p_db_connection.commit()
     except Exception as e0:
@@ -86,8 +91,9 @@ def empty_folder(p_path):
             if os.path.isfile(l_file_path):
                 os.unlink(l_file_path)
             # elif os.path.isdir(file_path): shutil.rmtree(file_path)
-        except Exception as e:
-            print(e)
+        except Exception as e0:
+            print(e0)
+
 
 # ---------------------------------------------------- Main section ----------------------------------------------------
 if __name__ == "__main__":
@@ -108,28 +114,33 @@ if __name__ == "__main__":
         password=g_dbPassword
     )
 
-    # empty tables TB_PADAPATHA and TB_WORDS
-    l_cursor_write = l_db_connection.cursor()
+    if g_delete:
+        # empty tables TB_PARSING and TB_WORDS
+        l_cursor_write = l_db_connection.cursor()
+        try:
+            l_cursor_write.execute("""
+                    delete from "TB_PARSING"
+                """)
 
-    try:
-        l_cursor_write.execute("""
-                delete from "TB_PARSING"
-            """)
-
-    except Exception as e:
-        print('DB ERROR:', repr(e))
-        print(l_cursor_write.query)
-        sys.exit(0)
-    finally:
-        # release DB objects once finished
-        l_cursor_write.close()
+        except Exception as e:
+            print('DB ERROR:', repr(e))
+            print(l_cursor_write.query)
+            sys.exit(0)
+        finally:
+            # release DB objects once finished
+            l_cursor_write.close()
 
     l_cursor_read = l_db_connection.cursor()
 
     try:
         l_cursor_read.execute("""
-                select "ID_VERSE", "TX_VERSE", "TX_VERSE_ORIGINAL"
-                from "TB_SANSKRIT"
+                select 
+                    "S"."ID_VERSE"
+                    , "S"."TX_VERSE"
+                    , "S"."TX_VERSE_ORIGINAL"
+                from "TB_SANSKRIT" "S" left outer join "TB_PARSING" "P" on "P"."ID_VERSE" = "S"."ID_VERSE" 
+                where "P"."ID_VERSE" is null
+                order by "S"."N_BOOK", "S"."N_CHAPTER", "S"."N_SECTION", "S"."N_VERSE"
             """)
 
         for l_id, l_text, l_original in l_cursor_read:
@@ -151,11 +162,37 @@ if __name__ == "__main__":
                 'lex=SH&st=t&us=f&cp=t&text={0}&t=VH&topic=&mode=g&corpmode=&corpdir=&sentno='.format(l_urlencoded)
             print(l_url)
 
-            l_url_downloader = urllib.request.urlopen(l_url)
-            l_bytes = l_url_downloader.read()
+            l_page = ''
+            l_retries = 0
+            l_timeout = 15
+            while l_page == '':
+                try:
+                    l_url_downloader = urllib.request.urlopen(l_url, timeout=l_timeout)
+                    l_bytes = l_url_downloader.read()
 
-            l_page = l_bytes.decode("utf8")
-            l_url_downloader.close()
+                    l_page = l_bytes.decode("utf8")
+                    l_url_downloader.close()
+                except (timeout, urllib.request.URLError) as eu:
+                    if isinstance(eu, urllib.request.URLError):
+                        if isinstance(eu.reason, timeout):
+                            print('timeout captured through URLError:', repr(eu))
+                        else:
+                            print('URLError captured:', repr(eu))
+                            print('Aborting ...')
+                            break
+
+                    if l_retries < 5:
+                        print('Request timeout. Waiting for five seconds')
+                        time.sleep(5)
+                        l_retries += 1
+                        l_timeout += 3
+                        print('Retrying ({0}) timeout = {1} s.  ...'.format(l_retries, l_timeout))
+                    else:
+                        print('Stop trying')
+                        break
+
+            if l_page == '':
+                continue
 
             print('-->', len(l_page))
             save_parsing(l_db_connection, l_id, l_page)
