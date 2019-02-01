@@ -66,7 +66,7 @@ g_italics_replace = {
     ('<I>S</I>', 'ṣ')
 }
 
-g_cache = '/home/fi11222/disk-partage/Dev/Shatapatha Brahmana/cache/'
+g_cache = '/home/fi11222/disk-partage/Dev/ShatapathaBrahmana/cache/'
 
 
 # ---------------------------------------------------- Functions -------------------------------------------------------

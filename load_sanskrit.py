@@ -13,8 +13,8 @@ g_dbDatabase = 'ShatapathaBrahmana'
 g_dbUser = 'postgres'
 g_dbPassword = 'murugan!'
 
-g_root = '/home/fi11222/disk-partage/Dev/Shatapatha Brahmana/SB/'
-g_root_12 = '/home/fi11222/disk-partage/Dev/Shatapatha Brahmana/SB/SB 12/'
+g_root = '/home/fi11222/disk-partage/Dev/ShatapathaBrahmana/SB/'
+g_root_12 = '/home/fi11222/disk-partage/Dev/ShatapathaBrahmana/SB/SB 12/'
 
 g_do_full = True
 

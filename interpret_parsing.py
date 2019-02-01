@@ -9,6 +9,7 @@ import lxml.html
 import html
 import os
 import urllib.request
+import json
 
 __author__ = 'Nicolas Reimen'
 
@@ -17,7 +18,7 @@ g_dbDatabase = 'ShatapathaBrahmana'
 g_dbUser = 'postgres'
 g_dbPassword = 'murugan!'
 
-g_cache = '/home/fi11222/disk-partage/Dev/Shatapatha Brahmana/inria/'
+g_cache = '/home/fi11222/disk-partage/Dev/ShatapathaBrahmana/inria/'
 
 
 # ---------------------------------------------------- functions & classes ---------------------------------------------
@@ -73,6 +74,45 @@ def get_lex(p_link_lex):
         l_lex0.append(l_lex_entry)
 
     return l_lex0
+
+
+def save_sentence(p_db_connection, p_id, p_sentence):
+    """
+    Saves the interpretation list to the DB
+
+    :param p_db_connection: Live DB connection
+    :param p_id: Verse ID
+    :param p_sentence: list of sentence components
+    :return: nothing
+    """
+    l_cursor_w = p_db_connection.cursor()
+    try:
+        for l_begin0, l_end0, l_word0, l_lemma0, l_grammar0, l_lex0 in p_sentence:
+            l_cursor_w.execute("""
+                        insert into 
+                            "TB_WORD"(
+                                "ID_VERSE"
+                                , "TX_WORD"
+                                , "TX_GRAMMAR"
+                                , "TX_LEXICON_SH"
+                                , "TX_LEMMA"
+                            )
+                            values( %s, %s, %s, %s, %s );
+                    """, (p_id, l_word0,
+                          json.dumps(l_grammar0),
+                          json.dumps(l_lex0),
+                          json.dumps(l_lemma0)))
+
+            p_db_connection.commit()
+    except Exception as e0:
+        p_db_connection.rollback()
+
+        print('DB ERROR:', repr(e0))
+        print(l_cursor_w.query)
+        sys.exit(0)
+    finally:
+        # release DB objects once finished
+        l_cursor_w.close()
 
 
 # ---------------------------------------------------- Main section ----------------------------------------------------
@@ -171,7 +211,7 @@ if __name__ == "__main__":
 
                             l_grammar = re.findall(r'{\s*([^}]+)\s*}', l_onclick)
                             l_link_lex = re.findall(r'<a\shref=(https://sanskrit.inria.fr[^>]+)>', l_onclick)
-                            # <a href=&quot;https://sanskrit.inria.fr/DICO/1.html#atha&quot;><i>atha</i></a>
+                            # <a href=https://sanskrit.inria.fr/DICO/1.html#atha><i>atha</i></a>
                             l_lemma = re.findall(
                                 r'<a\shref=https://sanskrit.inria.fr/DICO/\d+.html#[^>]+><i>([^<]+)</i></a>',
                                 l_onclick)
@@ -216,7 +256,8 @@ if __name__ == "__main__":
                         l_cell_count += 1
                 l_row_count += 1
 
-            if l_id_verse == 143414:
+            save_sentence(l_db_connection, l_id_verse, l_sentence)
+            if l_id_verse == 143415:
                 for l_begin, l_end, l_word, l_lemma, l_grammar, l_lex in l_sentence:
                     print('{0:5} {1:5} {2} {3} {4} {5}'.format(l_begin, l_end, l_word, l_lemma, l_grammar, l_lex))
                 sys.exit(0)
