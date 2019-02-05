@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/../Chandas/.idea/Chandas.iml" filepath="$PROJECT_DIR$/../Chandas/.idea/Chandas.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/Shatapatha Brahmana.iml" filepath="$PROJECT_DIR$/.idea/Shatapatha Brahmana.iml" />
+    </modules>
+  </component>
+</project>

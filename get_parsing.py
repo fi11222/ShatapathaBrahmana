@@ -148,6 +148,13 @@ if __name__ == "__main__":
             print(l_original)
             print(l_text)
 
+            # text cleanup
+            l_text = re.sub(r'[*/;!?><^=\[\]\\]', '', l_text)
+            l_text = re.sub(r'{[^}]+}]', '', l_text)
+
+            # `
+            l_text = re.sub(r'`', "'", l_text)
+
             for l_iast, l_vel in g_iast_to_velthuis:
                 l_text = re.sub(l_iast, l_vel, l_text)
 
@@ -195,10 +202,20 @@ if __name__ == "__main__":
                 continue
 
             print('-->', len(l_page))
+
+            l_page_html = l_page
+            # <span class=""red"">Wrong input </span><span class=""blue"">Undefined token : ></span>
+            if len(l_page) < 4000:
+                l_match = re.search(
+                    r'<span\sclass="red">Wrong\sinput\s*</span><span\sclass="blue">([^<]+)</span>',
+                    l_page)
+                if l_match:
+                    l_page = '*** ERROR *** : ' + l_match.group(1)
+
             save_parsing(l_db_connection, l_id, l_page)
             l_path_cache = os.path.join(g_cache, '{0}.html'.format(l_id))
             with open(l_path_cache, 'w', encoding='utf8') as l_fo:
-                l_fo.write(l_page)
+                l_fo.write(l_page_html)
 
     except Exception as e:
         print('DB ERROR:', repr(e))
