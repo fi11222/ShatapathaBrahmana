@@ -192,7 +192,8 @@ def fetch_parsing(p_db_connection, p_row_count, p_row_number, p_id, p_original, 
                 if isinstance(eu.reason, timeout):
                     print('timeout captured through URLError:', repr(eu))
                 else:
-                    print('URLError captured:', repr(eu))
+                    l_page = 'URLError captured: ' + repr(eu)
+                    print(l_page)
                     print('Aborting ...')
                     break
 
