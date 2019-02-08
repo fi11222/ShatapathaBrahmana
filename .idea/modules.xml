@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/../Chandas/.idea/Chandas.iml" filepath="$PROJECT_DIR$/../Chandas/.idea/Chandas.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/Shatapatha Brahmana.iml" filepath="$PROJECT_DIR$/.idea/Shatapatha Brahmana.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../Shivaja_Extraction/.idea/Shivaja_Extraction.iml" filepath="$PROJECT_DIR$/../Shivaja_Extraction/.idea/Shivaja_Extraction.iml" />
     </modules>
   </component>
 </project>

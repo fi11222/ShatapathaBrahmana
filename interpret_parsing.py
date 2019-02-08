@@ -156,9 +156,16 @@ if __name__ == "__main__":
         l_cursor_read.execute("""
                 select "ID_VERSE", "TX_PARSING_HTML"
                 from "TB_PARSING"
+                where "N_LENGTH" > 3000
+                order by "ID_PARSING"
             """)
 
         for l_id_verse, l_html in l_cursor_read:
+            # check for <!DOCTYPE html>
+            l_match = re.search(r'<!DOCTYPE\shtml>', l_html)
+            if not l_match:
+                continue
+
             print('------------------------', l_id_verse, '-------------------------------')
             print(len(l_html))
             l_html = re.sub(r'<head>.*</head>', '', l_html, flags=re.DOTALL | re.MULTILINE)
@@ -171,8 +178,8 @@ if __name__ == "__main__":
             # href="javascript ... "
             l_html = re.sub(r'href="(javascript[^"]+)"', r'href=\1', l_html)
 
-            with open('./inria.html', 'w', encoding='utf8') as l_fo:
-                l_fo.write(l_html)
+            # with open('./inria.html', 'w', encoding='utf8') as l_fo:
+            #    l_fo.write(l_html)
 
             l_root = None
             try:
@@ -183,6 +190,13 @@ if __name__ == "__main__":
                 sys.exit(0)
 
             l_top_table = l_root.xpath('//table[@class=\'center\']')[0]
+
+            l_match = re.search(r'Gérard Huet', lxml.html.tostring(l_top_table, encoding='unicode'))
+            if l_match:
+                print('*** ERROR *** found Gérard Huet in table')
+                sys.exit(0)
+                # continue
+
             l_first_row = True
             l_row_count = 0
             l_sentence = []
@@ -196,9 +210,14 @@ if __name__ == "__main__":
                     l_col_position = 0
                     l_end_previous = 0
                     for l_cell in l_row:
-                        print('   ', l_cell.tag, l_cell.attrib, len(l_cell))
-                        if 'colspan' not in l_cell.attrib.keys() and len(l_cell) > 0:
-                            print('*** ERROR *** [{0} {1}] No colspan on a non-empty <td>')
+                        l_cell_string = lxml.html.tostring(l_cell, encoding='unicode')
+                        print('   ', l_cell.tag, l_cell.attrib, len(l_cell_string))
+
+                        # 9 = len('<td></td>')
+                        if 'colspan' not in l_cell.attrib.keys() and len(l_cell_string) > 9:
+                            print('*** ERROR *** [{0}] No colspan on a non-empty <td>'.format(l_cell_string))
+                            sys.exit(0)
+
                         if 'colspan' in l_cell.attrib.keys():
                             if l_col_position - l_end_previous > 2 and l_row_count == 0:
                                 print('Hole:', l_end_previous+1, l_col_position-1)

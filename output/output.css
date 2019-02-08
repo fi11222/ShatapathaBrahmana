@@ -1,9 +1,44 @@
-p.verse_number{
+span.verse_number{
     font-weight: bold;
 }
 
+p.skt_iast{
+    color: Brown;
+}
+
+td.lex_cell{
+    vertical-align: top;
+    padding: 3px;
+}
+
 span.lexword{
-    color: red;
+    color: DarkBlue;
+    font-weight: bold;
+}
+
+span.unknown_string{
+    color: Red;
+}
+
+span.conjug{
+    color: CornflowerBlue;
+}
+
+span.abbrev{
+    color: DarkGray;
+}
+
+span.lemma{
+    color: DarkRed;
+    font-style: italic;
+}
+
+ul.lex_options{
+    margin: 0px;
+}
+
+li.lex_options{
+    padding-top: 3px;
 }
 
  /* Tooltip container */

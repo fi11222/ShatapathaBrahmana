@@ -49,3 +49,11 @@ from "TB_SANSKRIT" "S" join "TB_PARSING" "P" on "P"."ID_VERSE" = "S"."ID_VERSE" 
 ) "C" on "P"."ID_VERSE" = "C"."ID_VERSE"
 where "P"."N_LENGTH" < 4000 or "C"."COUNT" > 1
 order by "ID_VERSE", "N_SEGMENT"
+
+delete from "TB_PARSING" "P"
+using (
+	select "ID_VERSE", count(1) "COUNT"
+	from "TB_PARSING"
+	group by "ID_VERSE"
+) "C"
+where "P"."N_LENGTH" < 4000 or ("P"."ID_VERSE" = "C"."ID_VERSE" and "C"."COUNT" > 1)
