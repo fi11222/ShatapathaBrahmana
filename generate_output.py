@@ -101,7 +101,8 @@ def get_words(p_db_connection, p_id):
                         'lat.', 'conj.', 'act.', 'pl.', 'np.', 'véd.', 'fr.', 'cl.', 'part.', 'ifc.', 'pr.', 'pp.',
                         'aor.', 'pfp.', 'hi.', 'inf.', 'abs.', 'md.', 'pfu.', 'ca.', 'ppr.', 'ps.', 'ppft.',
                         'loc.', 'gr.', 'dés.', 'int.', 'myth.', 'math.', 'symb.', 'phil.', 'arch.', 'astr.', 'ang.',
-                        'all.', 'compar.', 'péj.', 'pft.', 'gram.', 'cf.', 'opp.']
+                        'all.', 'compar.', 'péj.', 'pft.', 'gram.', 'cf.', 'opp.', 'zoo.', 'géo.', 'hist.', 'du.',
+                        'épith.', 'red.']
             for l_lex in l_lexicon:
                 # move conjugation at end
                 l_re = r'v\.\s(?:(?:\[\d+]\s)?(?:[a-z]+\.\s)+(?:\[\d+]\s)?\([^)]+\)\s)+'
@@ -231,6 +232,7 @@ if __name__ == "__main__":
             with open(l_path, 'w') as l_file_out:
                 l_file_out.write(g_html_top.format(
                     '{0}.{1}.{2}.{3}'.format(l_book, l_chapter, l_section, l_verse)))
+                l_file_out.write('<div class="header">\n')
                 l_previous_link = \
                     '<a class="previous_verse" href="./{0}">Previous</a> '.format(l_previous) \
                     if l_previous is not None else ''
@@ -244,7 +246,10 @@ if __name__ == "__main__":
                     l_next_link + '</p>\n')
                 l_file_out.write('<p class="skt_iast">{0}</p>\n'.format(l_skt_txt))
                 l_file_out.write('<p>{0}</p>\n'.format(l_trans_txt))
+
+                l_file_out.write('</div><div class="middle">\n')
                 l_file_out.write(get_words(l_db_connection, l_id_verse))
+                l_file_out.write('</div>')
                 l_file_out.write(g_html_bottom)
 
             l_previous = l_file_name

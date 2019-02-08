@@ -1,3 +1,31 @@
+body {
+    margin: 0;
+    padding: 0;
+    height:100%;
+    width:100%
+}
+
+.header {
+    border-bottom: 1px dotted DarkGray;
+    border-top: 1px dotted White;
+    position: sticky;
+    top: 0;
+    background: White;
+    margin: 0;
+    padding-left: 10px;
+    padding-right: 10px;
+    z-index: 2;
+}
+
+.middle {
+    /* position:absolute;
+    top:150px;
+    bottom:0px;
+    left:0px;
+    right:0px;
+    overflow:auto; */
+}
+
 span.verse_number{
     font-weight: bold;
 }
