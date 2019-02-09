@@ -39,6 +39,11 @@ td.lex_cell{
     padding: 3px;
 }
 
+span.active_word{
+    color: White;
+    background: Brown;
+}
+
 span.lexword{
     color: DarkBlue;
     font-weight: bold;
@@ -88,7 +93,7 @@ li.lex_options{
 
   /* Position the tooltip text */
   position: absolute;
-  z-index: 1;
+  z-index: 3;
   bottom: 125%;
   left: 70%;
   margin-left: 0px;

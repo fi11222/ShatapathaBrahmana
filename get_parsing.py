@@ -37,7 +37,7 @@ g_iast_to_velthuis = [
     ('ṁ', '.m')
 ]
 
-g_cache = '/home/fi11222/disk-partage/Dev/Shatapatha Brahmana/TMP/'
+g_cache = '/home/fi11222/disk-partage/Dev/ShatapathaBrahmana/TMP/'
 
 g_delete = False
 
@@ -45,8 +45,7 @@ g_already_saved = dict()
 
 
 # ---------------------------------------------------- Functions -------------------------------------------------------
-def save_parsing(
-        p_db_connection, p_id, p_page):
+def save_parsing(p_db_connection, p_id, p_page, p_begin, p_end):
     """
     Saves a verse to the database
 
@@ -70,9 +69,11 @@ def save_parsing(
                         , "TX_PARSING_HTML"
                         , "N_LENGTH"
                         , "N_SEGMENT"
+                        , "N_BEGIN"
+                        , "N_END"
                     )
-                    values( %s, %s, %s, %s );
-            """, (p_id, p_page, len(p_page), l_segment))
+                    values( %s, %s, %s, %s, %s, %s );
+            """, (p_id, p_page, len(p_page), l_segment, p_begin, p_end))
 
         p_db_connection.commit()
         g_already_saved[p_id] = l_segment
@@ -104,7 +105,7 @@ def empty_folder(p_path):
             print(e0)
 
 
-def fetch_parsing(p_db_connection, p_row_count, p_row_number, p_id, p_original, p_text):
+def fetch_parsing(p_db_connection, p_row_count, p_row_number, p_id, p_original, p_text, p_begin):
     """
 
     :param p_db_connection:
@@ -113,6 +114,7 @@ def fetch_parsing(p_db_connection, p_row_count, p_row_number, p_id, p_original, 
     :param p_id:
     :param p_original:
     :param p_text:
+    :param p_begin:
     :return:
     """
 
@@ -205,8 +207,8 @@ def fetch_parsing(p_db_connection, p_row_count, p_row_number, p_id, p_original, 
                 l_timeout += 5
                 print('Retrying ({0}) timeout = {1} s.  ...'.format(l_retries, l_timeout))
             else:
-                print('Request timeout. Not trying anymore')
-                split_verse(p_db_connection, p_row_count, p_row_number, p_id, p_original, p_text)
+                print('Request timeout. Not trying anymore. Attempting split')
+                split_verse(p_db_connection, p_row_count, p_row_number, p_id, p_original, p_text, p_begin)
                 break
 
     if l_page == '':
@@ -226,15 +228,16 @@ def fetch_parsing(p_db_connection, p_row_count, p_row_number, p_id, p_original, 
             print(l_page)
             # "*** ERROR *** : Fatal error - index out of bounds"
             if l_error == 'Maximum input size exceeded - ' or l_error == 'Fatal error - index out of bounds':
-                split_verse(p_db_connection, p_row_count, p_row_number, p_id, p_original, p_text)
+                split_verse(p_db_connection, p_row_count, p_row_number, p_id, p_original, p_text, p_begin)
 
-    save_parsing(p_db_connection, p_id, l_page)
+    save_parsing(p_db_connection, p_id, l_page, p_begin, p_begin + len(p_text) - 1)
     l_path_cache = os.path.join(g_cache, '{0}.html'.format(p_id))
+    print('Saving to cache:', l_path_cache)
     with open(l_path_cache, 'w', encoding='utf8') as l_fo:
         l_fo.write(l_page_html)
 
 
-def split_verse(p_db_connection, p_row_count, p_row_number, p_id, p_original, p_text):
+def split_verse(p_db_connection, p_row_count, p_row_number, p_id, p_original, p_text, p_begin):
     """
 
     :param p_db_connection:
@@ -243,17 +246,23 @@ def split_verse(p_db_connection, p_row_count, p_row_number, p_id, p_original, p_
     :param p_id:
     :param p_original:
     :param p_text:
+    :param p_begin:
     :return:
     """
     l_words = p_text.split()
     l_half_len = len(l_words) // 2
     if l_half_len > 2:
         print('Splitting ...')
-        fetch_parsing(p_db_connection, p_row_count, p_row_number, p_id, p_original, ' '.join(l_words[:l_half_len]))
-        fetch_parsing(p_db_connection, p_row_count, p_row_number, p_id, p_original, ' '.join(l_words[l_half_len:]))
+        l_first_half = ' '.join(l_words[:l_half_len])
+        fetch_parsing( p_db_connection, p_row_count, p_row_number, p_id, p_original, l_first_half, p_begin)
+        fetch_parsing(p_db_connection, p_row_count, p_row_number, p_id, p_original,
+                      ' '.join(l_words[l_half_len:]),
+                      p_begin + len(l_first_half) + 1)
+        # +1 because a space is lost between the 2 halves
     else:
-        l_page0 = 'Split: {0}\nNo Response'.format(p_text)
-        save_parsing(p_db_connection, p_id, l_page0)
+        print('Too short to split. Saving as "No Response"')
+        l_page0 = 'Segment: {0}\nNo Response'.format(p_text)
+        save_parsing(p_db_connection, p_id, l_page0, p_begin, p_begin + len(p_text) - 1)
 
 
 # ---------------------------------------------------- Main section ----------------------------------------------------
@@ -266,7 +275,7 @@ if __name__ == "__main__":
     print('| v. 1.0 - 29/01/2019                                        |')
     print('+------------------------------------------------------------+')
 
-    empty_folder(g_cache)
+    # empty_folder(g_cache)
 
     l_db_connection = psycopg2.connect(
         host=g_dbServer,
@@ -326,7 +335,7 @@ if __name__ == "__main__":
             """)
 
         for l_id, l_text, l_original in l_cursor_read:
-            fetch_parsing(l_db_connection, l_row_count, l_row_number, l_id, l_original, l_text)
+            fetch_parsing(l_db_connection, l_row_count, l_row_number, l_id, l_original, l_text, 0)
             l_row_number += 1
 
     except Exception as e:

@@ -20,10 +20,39 @@ g_dbPassword = 'murugan!'
 
 g_cache = '/home/fi11222/disk-partage/Dev/ShatapathaBrahmana/inria/'
 
-g_verse_stop = False
+g_verse_stop = True
+
+g_conversion_mixed = [
+    ('ऐ', 'ai'),
+    ('औ ', 'au'),
+    ('ख', 'kh'),
+    ('घ', 'gh'),
+    ('छ', 'ch'),
+    ('झ', 'jh'),
+    ('ठ', 'ṭh'),
+    ('ढ', 'ḍh'),
+    ('थ', 'th'),
+    ('ध', 'dh'),
+    ('फ', 'ph'),
+    ('भ', 'bh')
+]
 
 
 # ---------------------------------------------------- functions & classes ---------------------------------------------
+def iast_2_mixed(p_string):
+    """
+
+    :param p_string:
+    :return:
+    """
+    l_result = p_string
+
+    for l_deva, l_iast in g_conversion_mixed:
+        l_result = re.sub(l_iast, l_deva, l_result)
+
+    return l_result
+
+
 def get_lex(p_link_lex):
     """
     Get the list of lexical entries based on the list of links provided
@@ -67,7 +96,16 @@ def get_lex(p_link_lex):
         # print(l_page)
 
         l_pattern = r'<a\sclass="navy"\sname="{0}">(.*?)__ENTRY_BOUNDARY__'.format(l_name)
-        l_lex_entry = re.findall(l_pattern, l_page, flags=re.DOTALL | re.MULTILINE)[0]
+        try:
+            l_lex_entry = re.findall(l_pattern, l_page, flags=re.DOTALL | re.MULTILINE)[0]
+        except IndexError:
+            print('*** LEX ENTRY NOT FOUND ***')
+            print('p_link_lex:', p_link_lex)
+            print('l_pattern: ', l_pattern)
+            with open('lex_page.html', 'w') as l_lex_file:
+                l_lex_file.write(l_page)
+            l_lex0.append('Lexicon Entry Not Found')
+            continue
 
         l_lex_entry = re.sub(r'<[^>]+>', '', l_lex_entry)
         l_lex_entry = re.sub(r'\s+', ' ', l_lex_entry).strip()
@@ -78,13 +116,15 @@ def get_lex(p_link_lex):
     return l_lex0
 
 
-def save_sentence(p_db_connection, p_id, p_sentence):
+def save_sentence(p_db_connection, p_id, p_sentence, p_id_parsing, p_padapatha):
     """
     Saves the interpretation list to the DB
 
     :param p_db_connection: Live DB connection
     :param p_id: Verse ID
     :param p_sentence: list of sentence components
+    :param p_id_parsing: ID in TB_PARSING
+    :param p_padapatha: The padapatha recovered from the INRIA parsing
     :return: nothing
     """
     l_cursor_w = p_db_connection.cursor()
@@ -98,14 +138,36 @@ def save_sentence(p_db_connection, p_id, p_sentence):
                                 , "TX_GRAMMAR"
                                 , "TX_LEXICON_SH"
                                 , "TX_LEMMA"
+                                , "N_BEGIN"
+                                , "N_END"
                             )
-                            values( %s, %s, %s, %s, %s );
+                            values( %s, %s, %s, %s, %s, %s, %s );
                     """, (p_id, l_word0,
                           json.dumps(l_grammar0),
                           json.dumps(l_lex0),
-                          json.dumps(l_lemma0)))
+                          json.dumps(l_lemma0),
+                          l_begin0, l_end0))
 
             p_db_connection.commit()
+    except Exception as e0:
+        p_db_connection.rollback()
+
+        print('DB ERROR:', repr(e0))
+        print(l_cursor_w.query)
+        sys.exit(0)
+    finally:
+        # release DB objects once finished
+        l_cursor_w.close()
+
+    l_cursor_w = p_db_connection.cursor()
+    try:
+        l_cursor_w.execute("""
+                    update "TB_PARSING"
+                    set "TX_PADAPATHA" = %s
+                    where "ID_PARSING" = %s;
+                """, (p_padapatha, p_id_parsing))
+
+        p_db_connection.commit()
     except Exception as e0:
         p_db_connection.rollback()
 
@@ -154,17 +216,26 @@ if __name__ == "__main__":
 
     try:
         l_cursor_read.execute("""
-                select "ID_VERSE", "TX_PARSING_HTML"
-                from "TB_PARSING"
+                select 
+                    "P"."ID_VERSE"
+                    , "P"."TX_PARSING_HTML"
+                    , "P"."N_BEGIN"
+                    , "S"."TX_VERSE"
+                    , "P"."ID_PARSING"
+                from "TB_PARSING" "P" join "TB_SANSKRIT" "S" on "P"."ID_VERSE" = "S"."ID_VERSE"
                 where "N_LENGTH" > 3000
                 order by "ID_PARSING"
             """)
 
-        for l_id_verse, l_html in l_cursor_read:
+        for l_id_verse, l_html, l_begin_position, l_skt_text, l_id_parsing in l_cursor_read:
             # check for <!DOCTYPE html>
             l_match = re.search(r'<!DOCTYPE\shtml>', l_html)
             if not l_match:
                 continue
+
+            l_skt_text = re.sub(r'\|', '', l_skt_text)
+            l_skt_text = re.sub(r'\s+', ' ', l_skt_text)
+            l_skt_text = iast_2_mixed(l_skt_text)
 
             print('------------------------', l_id_verse, '-------------------------------')
             print(len(l_html))
@@ -200,14 +271,17 @@ if __name__ == "__main__":
             l_first_row = True
             l_row_count = 0
             l_sentence = []
+            l_padapatha = ''
             for l_row in l_top_table:
                 print(l_row.tag)
                 if l_first_row:
+                    for l_cell in l_row:
+                        l_padapatha += l_cell.text
                     l_first_row = False
                     continue
                 else:
                     l_cell_count = 0
-                    l_col_position = 0
+                    l_col_position = l_begin_position
                     l_end_previous = 0
                     for l_cell in l_row:
                         l_cell_string = lxml.html.tostring(l_cell, encoding='unicode')
@@ -246,6 +320,7 @@ if __name__ == "__main__":
                             print('      l_begin    :', l_begin)
                             print('      l_end      :', l_end)
                             print('      l_word     :', l_word)
+                            print('      l_skt_text :', l_skt_text[l_begin:l_end+1])
                             print('      l_lemma    :', l_lemma)
                             print('      l_grammar  :', l_grammar)
                             print('      l_link_lex :', l_link_lex)
@@ -256,7 +331,13 @@ if __name__ == "__main__":
                             else:
                                 for i in range(len(l_sentence)):
                                     (l_begin1, l_end1, l_word1, l_lemma1, l_grammar1, l_lex1) = l_sentence[i]
-                                    if l_word1 == '__HOLE__' and (l_begin == l_begin1 or l_begin == l_begin1-1):
+                                    if len(l_word) == 1 and l_end == l_end1:
+                                        l_sent_new = l_sentence[:i+1] + \
+                                                     [(l_begin, l_end, l_word, l_lemma, l_grammar, l_lex)] + \
+                                                     l_sentence[i+1:]
+                                        l_sentence = l_sent_new
+                                        break
+                                    elif l_word1 == '__HOLE__' and (l_begin == l_begin1 or l_begin == l_begin1-1):
                                         if l_end == l_end1 or l_end == l_end1 - 1:
                                             l_sent_new = l_sentence[:i] + \
                                                          [(l_begin, l_end, l_word, l_lemma, l_grammar, l_lex)] + \
@@ -277,10 +358,14 @@ if __name__ == "__main__":
                         l_cell_count += 1
                 l_row_count += 1
 
-            save_sentence(l_db_connection, l_id_verse, l_sentence)
-            if l_id_verse == 143415 and g_verse_stop:
+            l_padapatha = iast_2_mixed(l_padapatha)
+            save_sentence(l_db_connection, l_id_verse, l_sentence, l_id_parsing, l_padapatha)
+            if l_id_verse == 143375 and g_verse_stop:
+                print(l_skt_text)
+                print(l_padapatha)
                 for l_begin, l_end, l_word, l_lemma, l_grammar, l_lex in l_sentence:
-                    print('{0:5} {1:5} {2} {3} {4} {5}'.format(l_begin, l_end, l_word, l_lemma, l_grammar, l_lex))
+                    print('{0:5} {1:5} {2} {3} {4} {5} {6}'.format(
+                        l_begin, l_end, l_word, l_padapatha[l_begin:l_end+1], l_lemma, l_grammar, l_lex))
                 sys.exit(0)
 
     except Exception as e:

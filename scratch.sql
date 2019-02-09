@@ -57,3 +57,8 @@ using (
 	group by "ID_VERSE"
 ) "C"
 where "P"."N_LENGTH" < 4000 or ("P"."ID_VERSE" = "C"."ID_VERSE" and "C"."COUNT" > 1)
+
+update "TB_PARSING" "P"
+set "N_BEGIN" = 0, "N_END" = length("S"."TX_VERSE") - 1
+from "TB_SANSKRIT" "S"
+where "P"."ID_VERSE" = "S"."ID_VERSE"
