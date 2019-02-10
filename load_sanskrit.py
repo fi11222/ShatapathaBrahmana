@@ -156,6 +156,7 @@ def iast_to_deva(p_string):
         l_result = re.sub(l_vl, l_vd, l_result)
 
     l_result = re.sub(g_visarga_l, g_visarga_d, l_result)
+    l_result = re.sub(g_anusvara_l, g_anusvara_d, l_result)
 
     l_result = re.sub(" '", 'ऽ', l_result)
 

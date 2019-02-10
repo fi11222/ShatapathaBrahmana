@@ -20,11 +20,11 @@ g_dbPassword = 'murugan!'
 
 g_cache = '/home/fi11222/disk-partage/Dev/ShatapathaBrahmana/inria/'
 
-g_verse_stop = True
+g_verse_stop = False
 
 g_conversion_mixed = [
     ('ऐ', 'ai'),
-    ('औ ', 'au'),
+    ('औ', 'au'),
     ('ख', 'kh'),
     ('घ', 'gh'),
     ('छ', 'ch'),

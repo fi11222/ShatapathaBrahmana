@@ -31,6 +31,10 @@ span.verse_number{
 }
 
 p.skt_iast{
+    font-style: italic;
+}
+
+p.skt_span{
     color: Brown;
 }
 
