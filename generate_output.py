@@ -259,12 +259,14 @@ def get_padapatha(p_db_connection, p_id_verse):
     :return:
     """
     l_pada = ''
+    l_inverted_table = None
     l_seg_count = 0
     l_cursor_read0 = p_db_connection.cursor()
     try:
         l_cursor_read0.execute("""
                 select 
                     "TX_PADAPATHA"
+                    , "TX_INVERTED"
                     , "N_BEGIN"
                     , "N_END"
                     , "N_LENGTH"
@@ -276,7 +278,9 @@ def get_padapatha(p_db_connection, p_id_verse):
             """, (p_id_verse,))
 
         # print(l_cursor_read0.query.decode('utf8'))
-        for l_segment_txt, l_begin, l_end, l_length in l_cursor_read0:
+        for l_segment_txt, l_inverted_json, l_begin, l_end, l_length in l_cursor_read0:
+            if l_inverted_json is not None:
+                l_inverted_table = json.loads(l_inverted_json)
             l_segment_txt = l_segment_txt if l_segment_txt is not None else ''
             if l_begin == 0:
                 l_pada += l_segment_txt
@@ -292,7 +296,33 @@ def get_padapatha(p_db_connection, p_id_verse):
         # release DB objects once finished
         l_cursor_read0.close()
 
-    return l_pada, l_seg_count
+    return l_pada, l_seg_count, l_inverted_table
+
+
+def inverted_table_rep(p_inverted_table):
+    """
+
+    :param p_inverted_table:
+    :return:
+    """
+    l_inverted_html = '<table class="inverted_table">\n'
+    for l_row in p_inverted_table:
+        l_inverted_html += '<tr>\n'
+        l_first_cell = True
+        for l_cell in l_row:
+            if l_first_cell:
+                l_inverted_html += '<td class="inv_letters">{0}</td>\n'.format(l_cell)
+                l_first_cell = False
+            else:
+                l_colspan, l_word, l_lemma, l_grammar, l_lex = l_cell
+                if l_word == '__EMPTY__':
+                    l_inverted_html += '<td></td>\n'
+                elif l_word != '__PLACEHOLDER__':
+                    l_inverted_html += '<td class="inv_multirow" rowspan="{0}">{1}</td>\n'.format(l_colspan, l_word)
+        l_inverted_html += '</tr>\n'
+    l_inverted_html += '</table>'
+
+    return l_inverted_html
 
 
 # ---------------------------------------------------- Main section ----------------------------------------------------
@@ -381,7 +411,7 @@ if __name__ == "__main__":
             print(l_file_name)
             l_path = os.path.join(g_output_path, l_file_name)
 
-            l_padapatha, l_segment_count = get_padapatha(l_db_connection, l_id_verse)
+            l_padapatha, l_segment_count, l_inverted_table = get_padapatha(l_db_connection, l_id_verse)
             print(l_padapatha)
 
             with open(l_path, 'w') as l_file_out:
@@ -491,6 +521,7 @@ if __name__ == "__main__":
 
                 l_file_out.write('</div><div class="middle">\n')
                 l_file_out.write(l_words_table)
+                l_file_out.write(inverted_table_rep(l_inverted_table))
                 l_file_out.write('</div>')
                 l_file_out.write(g_html_bottom)
 

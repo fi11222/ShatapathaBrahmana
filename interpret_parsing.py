@@ -116,7 +116,7 @@ def get_lex(p_link_lex):
     return l_lex0
 
 
-def save_sentence(p_db_connection, p_id, p_sentence, p_id_parsing, p_padapatha):
+def save_sentence(p_db_connection, p_id, p_sentence, p_id_parsing, p_padapatha, p_inverted_table):
     """
     Saves the interpretation list to the DB
 
@@ -125,6 +125,7 @@ def save_sentence(p_db_connection, p_id, p_sentence, p_id_parsing, p_padapatha):
     :param p_sentence: list of sentence components
     :param p_id_parsing: ID in TB_PARSING
     :param p_padapatha: The padapatha recovered from the INRIA parsing
+    :param p_inverted_table: inverted (col/row) of the INRIA table representation
     :return: nothing
     """
     l_cursor_w = p_db_connection.cursor()
@@ -163,9 +164,9 @@ def save_sentence(p_db_connection, p_id, p_sentence, p_id_parsing, p_padapatha):
     try:
         l_cursor_w.execute("""
                     update "TB_PARSING"
-                    set "TX_PADAPATHA" = %s
+                    set "TX_PADAPATHA" = %s, "TX_INVERTED" = %s
                     where "ID_PARSING" = %s;
-                """, (p_padapatha, p_id_parsing))
+                """, (p_padapatha, json.dumps(p_inverted_table), p_id_parsing))
 
         p_db_connection.commit()
     except Exception as e0:
@@ -272,12 +273,17 @@ if __name__ == "__main__":
             l_row_count = 0
             l_sentence = []
             l_padapatha = ''
+            l_col_count = 0
+            l_inverted_table = []
             for l_row in l_top_table:
                 print(l_row.tag)
                 if l_first_row:
                     for l_cell in l_row:
                         l_padapatha += l_cell.text
+                        l_inverted_table.append([l_cell.text])
+                        l_col_count += 1
                     l_first_row = False
+                    print(len(l_inverted_table), l_inverted_table)
                     continue
                 else:
                     l_cell_count = 0
@@ -320,11 +326,20 @@ if __name__ == "__main__":
                             print('      l_begin    :', l_begin)
                             print('      l_end      :', l_end)
                             print('      l_word     :', l_word)
-                            print('      l_skt_text :', l_skt_text[l_begin:l_end+1])
                             print('      l_lemma    :', l_lemma)
                             print('      l_grammar  :', l_grammar)
                             print('      l_link_lex :', l_link_lex)
                             print('      l_lex      :', l_lex)
+                            print('      l_inverted_table[l_begin]:', l_inverted_table[l_begin])
+
+                            if l_begin_position == 0:
+                                l_inverted_table[l_begin].append(
+                                    (l_colspan, l_word, l_lemma, l_grammar, l_lex))
+                                for i in range(l_begin+1, l_col_position):
+                                    l_inverted_table[i].append(
+                                        (1, '__PLACEHOLDER__', [], [], []))
+
+                            # print(l_inverted_table)
 
                             if l_row_count == 0:
                                 l_sentence.append((l_begin, l_end, l_word, l_lemma, l_grammar, l_lex))
@@ -354,18 +369,31 @@ if __name__ == "__main__":
 
                             l_end_previous = l_end
                         else:
+                            l_inverted_table[l_col_position].append(
+                                (1, '__EMPTY__', [], [], []))
                             l_col_position += 1
                         l_cell_count += 1
                 l_row_count += 1
 
             l_padapatha = iast_2_mixed(l_padapatha)
-            save_sentence(l_db_connection, l_id_verse, l_sentence, l_id_parsing, l_padapatha)
+            save_sentence(l_db_connection, l_id_verse, l_sentence, l_id_parsing, l_padapatha, l_inverted_table)
             if l_id_verse == 143375 and g_verse_stop:
                 print(l_skt_text)
                 print(l_padapatha)
                 for l_begin, l_end, l_word, l_lemma, l_grammar, l_lex in l_sentence:
                     print('{0:5} {1:5} {2} {3} {4} {5} {6}'.format(
                         l_begin, l_end, l_word, l_padapatha[l_begin:l_end+1], l_lemma, l_grammar, l_lex))
+
+                for r in range(l_col_count):
+                    for c in range(l_row_count):
+                        if c == 0:
+                            print('{0:2}'.format(l_inverted_table[r][c]), end=' ')
+                        else:
+                            l_colspan, l_word, l_lemma, l_grammar, l_lex = l_inverted_table[r][c]
+                            print('{0:2}'.format(
+                                '..' if l_word == '__EMPTY__' else '++' if l_word == '__PLACEHOLDER__' else l_colspan
+                            ), end=' ')
+                    print()
                 sys.exit(0)
 
     except Exception as e:
@@ -376,5 +404,3 @@ if __name__ == "__main__":
     finally:
         # release DB objects once finished
         l_cursor_read.close()
-
-
