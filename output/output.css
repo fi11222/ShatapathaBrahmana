@@ -126,7 +126,7 @@ li.lex_options{
 }
 
 table.inverted_table{
-    margin: 1em, 0, 0, 0;
+    margin: 1em 0 0 10px;
     border-collapse: collapse;
 }
 
@@ -139,4 +139,16 @@ td.inv_multirow{
     text-align: center;
     padding: 2px 8px;
     border: 1px solid DarkGray;
+}
+
+a.lemma_link{
+    text-decoration: none;
+    font-style: italic;
+    color: Brown;
+}
+
+a.lemma_link:hover{
+    text-decoration: underline;
+    font-style: italic;
+    color: Brown;
 }

@@ -164,8 +164,8 @@ def get_words(p_db_connection, p_id):
             l_word_new = ''
             if len(l_word) > 20:
                 # l_word = str(len(l_word) // 20) + '!' + l_word
-                for i in range(len(l_word) // 20 + 1):
-                    l_word_new += l_word[i*20:min(len(l_word), (i+1)*20)] + '- '
+                for j in range(len(l_word) // 20 + 1):
+                    l_word_new += l_word[j*20:min(len(l_word), (j+1)*20)] + '- '
                 # l_word += '|' + l_word_new
                 l_word = l_word_new[:-2]
 
@@ -238,8 +238,8 @@ def get_words(p_db_connection, p_id):
                 l_html += '</ul></td>\n'
             l_html += '</tr>\n'
 
-    except Exception as e:
-        print('DB ERROR:', repr(e))
+    except Exception as e0:
+        print('DB ERROR:', repr(e0))
         traceback.print_exc()
         print(l_cursor_read0.query)
         sys.exit(0)
@@ -259,7 +259,7 @@ def get_padapatha(p_db_connection, p_id_verse):
     :return:
     """
     l_pada = ''
-    l_inverted_table = None
+    l_inv_table = None
     l_seg_count = 0
     l_cursor_read0 = p_db_connection.cursor()
     try:
@@ -280,12 +280,13 @@ def get_padapatha(p_db_connection, p_id_verse):
         # print(l_cursor_read0.query.decode('utf8'))
         for l_segment_txt, l_inverted_json, l_begin, l_end, l_length in l_cursor_read0:
             if l_inverted_json is not None:
-                l_inverted_table = json.loads(l_inverted_json)
+                l_inv_table = json.loads(l_inverted_json)
             l_segment_txt = l_segment_txt if l_segment_txt is not None else ''
             if l_begin == 0:
                 l_pada += l_segment_txt
             else:
                 l_pada += ' ' + l_segment_txt
+                l_inv_table = None
             l_seg_count += 1
     except Exception as e0:
         print('DB ERROR:', repr(e0))
@@ -296,7 +297,7 @@ def get_padapatha(p_db_connection, p_id_verse):
         # release DB objects once finished
         l_cursor_read0.close()
 
-    return l_pada, l_seg_count, l_inverted_table
+    return l_pada, l_seg_count, l_inv_table
 
 
 def inverted_table_rep(p_inverted_table):
@@ -315,10 +316,19 @@ def inverted_table_rep(p_inverted_table):
                 l_first_cell = False
             else:
                 l_colspan, l_word, l_lemma, l_grammar, l_lex = l_cell
+
+                l_lemma_string = ' / '.join([('<a target="_blank" rel="noopener noreferrer" ' +
+                                              'class="lemma_link" href="{0}">{1}</a>').format(l_link, l_lem)
+                                             for l_link, l_lem in zip(l_lex, l_lemma)])
+
                 if l_word == '__EMPTY__':
                     l_inverted_html += '<td></td>\n'
                 elif l_word != '__PLACEHOLDER__':
-                    l_inverted_html += '<td class="inv_multirow" rowspan="{0}">{1}</td>\n'.format(l_colspan, l_word)
+                    l_inverted_html += \
+                        ('<td class="inv_multirow" rowspan="{0}">' +
+                         '<span class="tooltip">{1}<span class="tooltiptext">{3}</span></span><br>' +
+                         '<span>{2}</span>' +
+                         '</td>\n').format(l_colspan, l_word, l_lemma_string, ' '.join(l_grammar))
         l_inverted_html += '</tr>\n'
     l_inverted_html += '</table>'
 

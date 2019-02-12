@@ -334,7 +334,7 @@ if __name__ == "__main__":
 
                             if l_begin_position == 0:
                                 l_inverted_table[l_begin].append(
-                                    (l_colspan, l_word, l_lemma, l_grammar, l_lex))
+                                    (l_colspan, l_word, l_lemma, l_grammar, l_link_lex))
                                 for i in range(l_begin+1, l_col_position):
                                     l_inverted_table[i].append(
                                         (1, '__PLACEHOLDER__', [], [], []))
