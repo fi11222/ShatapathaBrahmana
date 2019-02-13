@@ -30,6 +30,10 @@ span.verse_number{
     font-weight: bold;
 }
 
+span.incomplete_parsing{
+    color: Red;
+}
+
 p.skt_iast{
     font-style: italic;
 }

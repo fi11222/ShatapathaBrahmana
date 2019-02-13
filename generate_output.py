@@ -209,10 +209,10 @@ def get_words(p_db_connection, p_id):
                         'aor.', 'pfp.', 'hi.', 'inf.', 'abs.', 'md.', 'pfu.', 'ca.', 'ppr.', 'ps.', 'ppft.',
                         'loc.', 'gr.', 'dés.', 'int.', 'myth.', 'math.', 'symb.', 'phil.', 'arch.', 'astr.', 'ang.',
                         'all.', 'compar.', 'péj.', 'pft.', 'gram.', 'cf.', 'opp.', 'zoo.', 'géo.', 'hist.', 'du.',
-                        'épith.', 'red.']
+                        'épith.', 'red.', 'fut.', 'péri.']
             for l_lex in l_lexicon:
                 # move conjugation at end
-                l_re = r'v\.\s(?:(?:\[\d+]\s)?(?:[a-z]+\.\s)+(?:\[\d+]\s)?\([^)]+\)\s)+'
+                l_re = r'v\.\s(?:(?:\[\d+]\s)?(?:\w+\.\s)+(?:\[\d+]\s)?\([^)]+\)\s)+'
                 l_all_matches = re.findall(l_re, l_lex)
                 if len(l_all_matches) > 0:
                     l_lex = re.sub(l_re, 'v. ', l_lex)
@@ -515,9 +515,10 @@ if __name__ == "__main__":
                     ' <a class="next_verse" href="./{0}">Next</a>'.format(l_next_file[l_file_name]) \
                     if l_file_name in l_next_file.keys() is not None else ''
                 l_file_out.write(
-                    '<p class="verse_number">' + l_previous_link +
-                    '<span class="verse_number">{0}:{1}:{2}:{3}</span>'.format(
-                        l_book, l_chapter, l_section, l_verse) +
+                    '<p>' + l_previous_link +
+                    '<span class="verse_number{4}">{0}:{1}:{2}:{3}</span>'.format(
+                        l_book, l_chapter, l_section, l_verse,
+                        ' incomplete_parsing' if l_segment_count > 1 else '') +
                     l_next_link + '</p>\n')
 
                 # l_file_out.write('<p class="skt_iast">Test <span id="target">Text</span> bla</p>\n')
@@ -531,7 +532,8 @@ if __name__ == "__main__":
 
                 l_file_out.write('</div><div class="middle">\n')
                 l_file_out.write(l_words_table)
-                l_file_out.write(inverted_table_rep(l_inverted_table))
+                if l_inverted_table is not None:
+                    l_file_out.write(inverted_table_rep(l_inverted_table))
                 l_file_out.write('</div>')
                 l_file_out.write(g_html_bottom)
 
